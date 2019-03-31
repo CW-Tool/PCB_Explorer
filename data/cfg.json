@@ -1,0 +1,23 @@
+{
+  "scale": 0.71,
+  "scaleX": 0.98,
+  "scaleY": 0.89,
+  "offsetX": 9,
+  "offsetY": -1,
+  "pos": [
+    3,
+    4
+  ],
+  "items": [
+    {
+      "name": "gnd",
+      "x": 234,
+      "y": 33
+    },
+    {
+      "name": "VDD +",
+      "x": 155,
+      "y": 400
+    }
+  ]
+}
