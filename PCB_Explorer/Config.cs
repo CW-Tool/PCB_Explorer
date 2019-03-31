@@ -9,17 +9,25 @@ using Newtonsoft.Json;
 
 namespace PCB_Explorer
 {
+    public class Contact
+    {
+        public float x { get; set; }
+        public float y { get; set; }
+        public string b { get; set; }
+        public Contact(float _x, float _y, string _b)
+        {
+            x = _x;
+            y = _y;
+            b = _b;
+        }
+    }
+
     public class Item
     {
         public string name { get; set; }
-        public int x { get; set; }
-        public int y { get; set; }
+        public IList<Contact> contacts { get; set; }
     }
-    /*
-    public class Items
-    {
-        public ArrayList items { get; set; }
-    }*/
+
 
     class Config
     {
@@ -51,11 +59,7 @@ namespace PCB_Explorer
             {
                 json = System.IO.File.ReadAllText(filename);
             } catch(Exception e) { }
-            //// var json = File.ReadAllText(path); 
-            /*var json = @"{ 
-			    ServerAddress: null, 
-				ServerPort: null, 
-				ServerTimeout: null }";*/
+
             return JsonConvert.DeserializeObject<Config>(json);
         }
     }
