@@ -70,7 +70,7 @@
             0,
             0});
             this.nuScale.Name = "nuScale";
-            this.nuScale.Size = new System.Drawing.Size(73, 20);
+            this.nuScale.Size = new System.Drawing.Size(57, 20);
             this.nuScale.TabIndex = 0;
             this.nuScale.Value = new decimal(new int[] {
             2,
@@ -123,9 +123,9 @@
             // 
             // btnSave
             // 
-            this.btnSave.Location = new System.Drawing.Point(12, 51);
+            this.btnSave.Location = new System.Drawing.Point(75, 25);
             this.btnSave.Name = "btnSave";
-            this.btnSave.Size = new System.Drawing.Size(75, 23);
+            this.btnSave.Size = new System.Drawing.Size(42, 23);
             this.btnSave.TabIndex = 2;
             this.btnSave.Text = "Save";
             this.btnSave.UseVisualStyleBackColor = true;
@@ -221,22 +221,22 @@
             // lbItems
             // 
             this.lbItems.FormattingEnabled = true;
-            this.lbItems.Location = new System.Drawing.Point(12, 80);
+            this.lbItems.Location = new System.Drawing.Point(12, 54);
             this.lbItems.Name = "lbItems";
-            this.lbItems.Size = new System.Drawing.Size(113, 95);
+            this.lbItems.Size = new System.Drawing.Size(113, 173);
             this.lbItems.TabIndex = 3;
             this.lbItems.SelectedIndexChanged += new System.EventHandler(this.lbItems_SelectedIndexChanged);
             // 
             // tbItem
             // 
-            this.tbItem.Location = new System.Drawing.Point(31, 181);
+            this.tbItem.Location = new System.Drawing.Point(31, 236);
             this.tbItem.Name = "tbItem";
             this.tbItem.Size = new System.Drawing.Size(66, 20);
             this.tbItem.TabIndex = 4;
             // 
             // btnItemAdd
             // 
-            this.btnItemAdd.Location = new System.Drawing.Point(103, 181);
+            this.btnItemAdd.Location = new System.Drawing.Point(103, 236);
             this.btnItemAdd.Name = "btnItemAdd";
             this.btnItemAdd.Size = new System.Drawing.Size(22, 23);
             this.btnItemAdd.TabIndex = 5;
@@ -247,9 +247,9 @@
             // lbContact
             // 
             this.lbContact.FormattingEnabled = true;
-            this.lbContact.Location = new System.Drawing.Point(12, 210);
+            this.lbContact.Location = new System.Drawing.Point(12, 262);
             this.lbContact.Name = "lbContact";
-            this.lbContact.Size = new System.Drawing.Size(113, 134);
+            this.lbContact.Size = new System.Drawing.Size(113, 82);
             this.lbContact.TabIndex = 3;
             this.lbContact.SelectedIndexChanged += new System.EventHandler(this.lbContact_SelectedIndexChanged);
             // 
@@ -285,7 +285,7 @@
             // 
             // btnItemDel
             // 
-            this.btnItemDel.Location = new System.Drawing.Point(12, 179);
+            this.btnItemDel.Location = new System.Drawing.Point(12, 234);
             this.btnItemDel.Name = "btnItemDel";
             this.btnItemDel.Size = new System.Drawing.Size(13, 23);
             this.btnItemDel.TabIndex = 5;
@@ -307,7 +307,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(959, 541);
+            this.ClientSize = new System.Drawing.Size(959, 754);
             this.Controls.Add(this.btnAddContactRight);
             this.Controls.Add(this.btnAddContactBoth);
             this.Controls.Add(this.btnAddContactLeft);

@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using System.Collections;
 using Newtonsoft.Json;
 
+//Open the console. " View" > "Other Windows" > "Package Manager Console"
+//Then type the following: Install-Package Newtonsoft.Json.
 
 namespace PCB_Explorer
 {

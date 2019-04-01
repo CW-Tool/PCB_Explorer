@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -19,12 +20,17 @@ namespace PCB_Explorer
         int borderTop = 10;
         string dataPath = Path.Combine(Application.StartupPath,  @"..\..\..\data");
         string cfgFile = Path.Combine(Application.StartupPath, @"..\..\..\data\cfg.json");
+        int showOffsetX = 0;
+        int showOffsetY = 0;
+        int mouseDownX = 0;
+        int mouseDownY = 0;
+        bool moveImg = false;
 
         Image image1;
         Image image2;
-        Pen redPen = new Pen(Color.Red, 1);
-        Pen selPen = new Pen(Color.Yellow, 1);
-        Pen selContactsPen = new Pen(Color.Cyan, 1);
+        Pen redPen = new Pen(Color.Red, 2);
+        Pen selPen = new Pen(Color.Yellow, 2);
+        Pen selContactsPen = new Pen(Color.Cyan, 2);
 
         Config cfg;
 
@@ -45,6 +51,18 @@ namespace PCB_Explorer
             populateItemList();
             image1 = Image.FromFile(Path.Combine(dataPath, "A.png"));
             image2 = Image.FromFile(Path.Combine(dataPath, "B.png"));
+            this.MouseWheel += Form_MouseWheel;
+        }
+
+        private void Form_MouseWheel(object sender, MouseEventArgs e)
+        {
+            float delta = 0.03f;
+            if(e.Delta<0)
+            {
+                delta = -delta;
+            }
+
+            nuScale.Value += (decimal)delta;
         }
 
         private void populateItemList()
@@ -58,7 +76,9 @@ namespace PCB_Explorer
 
         private void populateContactList()
         {
+            selB = "";
             lbContact.Items.Clear();
+            selContacts = null;
             Item i = getSelectedItem();
             if (null != i)
             {
@@ -93,8 +113,8 @@ namespace PCB_Explorer
         private void drawPointer(Pen pen, float x, float y, PaintEventArgs e)
         {
             int w = 10;
-            e.Graphics.DrawLine(pen, x - w, y, x + w, y);
-            e.Graphics.DrawLine(pen, x, y-w, x, y+w);
+            e.Graphics.DrawLine(pen, showOffsetX + x - w, showOffsetY + y, showOffsetX + x + w, showOffsetY + y);
+            e.Graphics.DrawLine(pen, showOffsetX + x, showOffsetY + y - w, showOffsetX + x, showOffsetY + y + w);
         }
 
         private void drawPointerLeft(Pen pen, float x, float y, PaintEventArgs e)
@@ -114,13 +134,23 @@ namespace PCB_Explorer
             return (imgWidth - x);
         }
 
+        private void drawImg(Image img, int x, int y, PaintEventArgs e)
+        {
+          //  showOffsetX;
+          //  drawImage(img, borderLeft, borderTop, cfg.scale, cfg.scale, e);
+        }
+
+        
+
         private void Form1_Paint(object sender, PaintEventArgs e)
         {
-            drawImage(image1, borderLeft, borderTop, cfg.scale, cfg.scale, e);
+            drawImage(image1, showOffsetX + borderLeft, showOffsetY + borderTop, cfg.scale, cfg.scale, e);
+            //drawImg(image1, 0, 0, e);
 
             int imgWidth = (int)(image1.Width * cfg.scale);
             int imgBx = borderLeft + imageSpace + imgWidth;
-            drawImage(image2, imgBx + cfg.offsetX, borderTop + cfg.offsetY, cfg.scale * cfg.scaleX, cfg.scale* cfg.scaleY, e);
+            drawImage(image2, showOffsetX + imgBx + cfg.offsetX, showOffsetY + borderTop + cfg.offsetY, cfg.scale * cfg.scaleX, cfg.scale* cfg.scaleY, e);
+            //drawImg(image2, 0, 0, e);
 
             drawPointerLeft(redPen, mouseX, mouseY, e);
             drawPointerRight(redPen, mouseX, mouseY, e);
@@ -147,15 +177,85 @@ namespace PCB_Explorer
 
         int mouseX = 0;
         int mouseY = 0;
+        string mouseB = "";
+
+        private void highlightItem(Item item)
+        {
+            if (null != item)
+            {
+                int k = 0;
+                foreach (var i in cfg.items)
+                {
+                    if (item.name == i.name)
+                    {
+                        lbItems.SelectedIndex = k;
+                        break;
+                    }
+                    k++;
+                }
+            }
+            else
+            {
+                lbItems.SelectedIndex = -1;
+            }
+        }
+
+        private int getUnscaledX(MouseEventArgs e)
+        {
+            int x = (int)(((e.X - borderLeft) - showOffsetX) / cfg.scale);
+            if (x > image1.Width)
+            {
+                x = (int)(((e.X - borderLeft - imageSpace) - showOffsetX) / cfg.scale);
+                x = image1.Width - (x - image1.Width);
+            }
+            return x;
+        }
+
+        private int getUnscaledY(MouseEventArgs e)
+        {
+            int y = (int)(((e.Y - borderTop) - showOffsetY) / cfg.scale);
+            return y;
+        }
 
         private void updateMouseEvent(MouseEventArgs e)
         {
-            if (e.Button == MouseButtons.Right)
+            int x = (int)(((e.X - borderLeft) - showOffsetX) / cfg.scale);
+            int y = (int)(((e.Y - borderTop) - showOffsetY) / cfg.scale);
+
+            string clickedLayer = (x < image1.Width) ? "l" : "r";
+
+            if (e.Button == MouseButtons.Left)
             {
-                mouseX = e.X - borderLeft;
-                mouseY = e.Y - borderTop;
+                Item i = findItemAtPos(getUnscaledX(e), getUnscaledY(e), clickedLayer);
+                highlightItem(i);
+            }
+            else if (e.Button == MouseButtons.Right)
+            {
+                mouseX = (e.X - borderLeft) - showOffsetX;
+                mouseY = (e.Y - borderTop) - showOffsetY;
+                if(clickedLayer=="r")
+                {
+                    mouseX -= (imageSpace + (int)(image1.Width * cfg.scale));
+                    float imgWidth = (float)(image1.Width * cfg.scale);
+                    mouseX = (int)(imgWidth - mouseX);
+                }
+                int x2 = getUnscaledX(e);
+                mouseB = clickedLayer;
                 updt();
             }
+            if ((Control.ModifierKeys & Keys.Shift) != 0)
+            {
+                showOffsetX -= (mouseDownX - e.X);
+                showOffsetY -= (mouseDownY - e.Y);
+                updt();
+            }
+            mouseDownX = e.X;
+            mouseDownY = e.Y;
+        }
+
+        private void Form1_MouseDown(object sender, MouseEventArgs e)
+        {
+            updateMouseEvent(e);
         }
 
         private void Form1_MouseMove(object sender, MouseEventArgs e)
@@ -271,7 +371,8 @@ namespace PCB_Explorer
 
         private void showContact(Contact c)
         {
-            if(null != c)
+            selB = "";
+            if (null != c)
             {
                 selX = c.x * cfg.scale;
                 selY = c.y * cfg.scale;
@@ -283,12 +384,6 @@ namespace PCB_Explorer
         private void lbContact_SelectedIndexChanged(object sender, EventArgs e)
         {
             showContact(getSelectedContact());
-        }
-
-        private void Form1_MouseDown(object sender, MouseEventArgs e)
-        {
-            updateMouseEvent(e);
-
         }
 
         private void btnItemDel_Click(object sender, EventArgs e)
@@ -311,5 +406,40 @@ namespace PCB_Explorer
             }
             populateContactList();
         }
+
+
+        private bool doesContactMatch(Contact c, int x, int y, string layer)
+        {
+            int distance = 10;
+            bool ret = false;
+            if(null != c)
+            {
+                if(c.b == layer || c.b=="b")
+                    ret = (Math.Abs(c.x - x) < distance) && (Math.Abs(c.y - y) < distance);
+            }
+            return ret;
+        }
+
+        private Item findItemAtPos(int x, int y, string layer)
+        {
+            Item item = null;
+            foreach(Item i in cfg.items)
+            {
+                if (null != i.contacts)
+                {
+                    foreach (Contact c in i.contacts)
+                    {
+                        if (doesContactMatch(c, x, y, layer))
+                        {
+                            item = i;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            return item;
+        }
+
     }
 }
