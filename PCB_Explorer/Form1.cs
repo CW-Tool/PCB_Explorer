@@ -405,6 +405,8 @@ namespace PCB_Explorer
                 i.contacts.Remove(c);
             }
             populateContactList();
+            if (lbContact.Items.Count > 0)
+                lbContact.SelectedIndex = 0;
         }
 
 
