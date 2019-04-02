@@ -20,24 +20,25 @@ namespace PCB_Explorer
         int borderTop = 10;
         string dataPath = Path.Combine(Application.StartupPath,  @"..\..\..\data");
         string cfgFile = Path.Combine(Application.StartupPath, @"..\..\..\data\cfg.json");
-        int showOffsetX = 0;
-        int showOffsetY = 0;
-        int mouseDownX = 0;
-        int mouseDownY = 0;
-        bool moveImg = false;
+        Point imgPosOffset;
+        Point mouseDown;
+        enum Side_t { eLeft, eRight }; 
 
         Image image1;
         Image image2;
         Pen redPen = new Pen(Color.Red, 2);
-        Pen selPen = new Pen(Color.Yellow, 2);
+        Pen highlightedPen = new Pen(Color.Yellow, 2);
         Pen selContactsPen = new Pen(Color.Cyan, 2);
 
         Config cfg;
 
         IList<Contact> selContacts = null;
-        float selX = 0;
-        float selY = 0;
-        string selB = "";
+        PointF highlightedPos;
+        string highlightedSide = "";
+
+        Point mouse;
+        string mouseB = "";
+
 
         public Form1()
         {
@@ -76,7 +77,7 @@ namespace PCB_Explorer
 
         private void populateContactList()
         {
-            selB = "";
+            highlightedSide = "";
             lbContact.Items.Clear();
             selContacts = null;
             Item i = getSelectedItem();
@@ -100,85 +101,119 @@ namespace PCB_Explorer
         }
 
 
-        private void drawImage(Image img, int x, int y, float scaleW, float scaleH, PaintEventArgs e)
+        private void drawImage(Image img, float x, float y, float scaleW, float scaleH, PaintEventArgs e)
         {
             RectangleF destinationRect = new RectangleF(
                     x,
                     y,
-                    scaleW * image2.Width,
-                    scaleH * image2.Height);
+                    scaleW * img.Width,
+                    scaleH * img.Height);
             e.Graphics.DrawImage(img, destinationRect);
         }
+        
 
-        private void drawPointer(Pen pen, float x, float y, PaintEventArgs e)
+        private void drawMaker(Side_t side, Pen pen, PointF point, PaintEventArgs e)
         {
+            float y = point.Y + getImgY();
+            float x;
+
+            if (side == Side_t.eLeft)
+            {
+                x = getLeftImgX() + point.X;
+            }
+            else
+            {
+                x = getRightImgX() + getMirroredX(point.X);
+            }
+
             int w = 10;
-            e.Graphics.DrawLine(pen, showOffsetX + x - w, showOffsetY + y, showOffsetX + x + w, showOffsetY + y);
-            e.Graphics.DrawLine(pen, showOffsetX + x, showOffsetY + y - w, showOffsetX + x, showOffsetY + y + w);
+            e.Graphics.DrawLine(pen, x - w, y, x + w, y);
+            e.Graphics.DrawLine(pen, x, y - w, x, y + w);
         }
 
-        private void drawPointerLeft(Pen pen, float x, float y, PaintEventArgs e)
+
+        private void drawMaker(Side_t side, Pen pen, Point point, PaintEventArgs e)
         {
-            drawPointer(pen, x + borderLeft, y + borderTop, e);
+            PointF p = new PointF(point.X, point.Y);
+            drawMaker(side, pen, p, e);
         }
 
-        private void drawPointerRight(Pen pen, float x, float y, PaintEventArgs e)
+
+        private float getScaledLeftImageWidth()
         {
-            int imgWidth = (int)(image1.Width * cfg.scale);
-            drawPointer(pen, borderLeft + imgWidth + imageSpace + getMirroredX(x), y + borderTop, e);
+            return image1.Width * cfg.scale;
         }
+
+
+        private float getScaledRightImageWidth()
+        {
+            return image2.Width * cfg.scale * cfg.scaleX;
+        }
+
+
+        private float getScaling()
+        {
+            return cfg.scale;
+        }
+
 
         private float getMirroredX(float x)
         {
-            float imgWidth = (float)(image1.Width * cfg.scale);
+            float imgWidth = (float)(image1.Width * getScaling());
             return (imgWidth - x);
         }
+        
 
-        private void drawImg(Image img, int x, int y, PaintEventArgs e)
+        private float getImgY()
         {
-          //  showOffsetX;
-          //  drawImage(img, borderLeft, borderTop, cfg.scale, cfg.scale, e);
+            return imgPosOffset.Y + borderTop;
         }
 
-        
+
+        private float getLeftImgX()
+        {
+            return imgPosOffset.X + borderLeft;
+        }
+
+
+        private float getRightImgX()
+        {
+            return getLeftImgX() + getScaledLeftImageWidth() + imageSpace;
+        }
+
 
         private void Form1_Paint(object sender, PaintEventArgs e)
         {
-            drawImage(image1, showOffsetX + borderLeft, showOffsetY + borderTop, cfg.scale, cfg.scale, e);
-            //drawImg(image1, 0, 0, e);
+            drawImage(image1, getLeftImgX(), getImgY(), getScaling(), getScaling(), e);
+            drawImage(image2, getRightImgX() + cfg.offsetX, getImgY() + cfg.offsetY, getScaling() * cfg.scaleX, getScaling() * cfg.scaleY, e);
+            
 
-            int imgWidth = (int)(image1.Width * cfg.scale);
-            int imgBx = borderLeft + imageSpace + imgWidth;
-            drawImage(image2, showOffsetX + imgBx + cfg.offsetX, showOffsetY + borderTop + cfg.offsetY, cfg.scale * cfg.scaleX, cfg.scale* cfg.scaleY, e);
-            //drawImg(image2, 0, 0, e);
-
-            drawPointerLeft(redPen, mouseX, mouseY, e);
-            drawPointerRight(redPen, mouseX, mouseY, e);
+            drawMaker(Side_t.eLeft, redPen, mouse, e);
+            drawMaker(Side_t.eRight, redPen, mouse, e);
 
 
             if (null != selContacts)
             {
+                PointF point = new Point();
                 foreach (var c in selContacts)
                 {
-                    float x = c.x * cfg.scale;
-                    float y = c.y * cfg.scale;
+                    point.X = c.x * getScaling();
+                    point.Y = c.y * getScaling();
                     if (c.b == "l" || c.b == "b")
-                        drawPointerLeft(selContactsPen, x, y, e);
+                        drawMaker(Side_t.eLeft, selContactsPen, point, e);
                     if (c.b == "r" || c.b == "b")
-                        drawPointerRight(selContactsPen, x, y, e);
+                        drawMaker(Side_t.eRight, selContactsPen, point, e);
                 }
             }
 
-            if (selB == "l" || selB == "b")
-                drawPointerLeft(selPen, selX, selY, e);
-            if (selB == "r" || selB == "b")
-                drawPointerRight(selPen, selX, selY, e);
+            if (highlightedSide == "l" || highlightedSide == "b")
+                drawMaker(Side_t.eLeft, highlightedPen, highlightedPos, e);
+
+            if (highlightedSide == "r" || highlightedSide == "b")
+                drawMaker(Side_t.eRight, highlightedPen, highlightedPos, e);
         }
-
-        int mouseX = 0;
-        int mouseY = 0;
-        string mouseB = "";
-
+        
+        
         private void highlightItem(Item item)
         {
             if (null != item)
@@ -202,61 +237,64 @@ namespace PCB_Explorer
 
         private int getUnscaledX(MouseEventArgs e)
         {
-            int x = (int)(((e.X - borderLeft) - showOffsetX) / cfg.scale);
+            int x = (int)(((e.X - borderLeft) - imgPosOffset.X) / getScaling());
             if (x > image1.Width)
             {
-                x = (int)(((e.X - borderLeft - imageSpace) - showOffsetX) / cfg.scale);
+                x = (int)(((e.X - borderLeft - imageSpace) - imgPosOffset.X) / getScaling());
                 x = image1.Width - (x - image1.Width);
             }
             return x;
         }
 
+
         private int getUnscaledY(MouseEventArgs e)
         {
-            int y = (int)(((e.Y - borderTop) - showOffsetY) / cfg.scale);
+            int y = (int)(((e.Y - borderTop) - imgPosOffset.Y) / getScaling());
             return y;
         }
 
+
         private void updateMouseEvent(MouseEventArgs e)
         {
-            int x = (int)(((e.X - borderLeft) - showOffsetX) / cfg.scale);
-            int y = (int)(((e.Y - borderTop) - showOffsetY) / cfg.scale);
+            int x = (int)(((e.X - borderLeft) - imgPosOffset.X) / getScaling());
+            int y = (int)(((e.Y - borderTop) - imgPosOffset.Y) / getScaling());
 
-            string clickedLayer = (x < image1.Width) ? "l" : "r";
+            string clickedSide = (x < image1.Width) ? "l" : "r";
 
             if (e.Button == MouseButtons.Left)
             {
-                Item i = findItemAtPos(getUnscaledX(e), getUnscaledY(e), clickedLayer);
+                Item i = findItemAtPos(getUnscaledX(e), getUnscaledY(e), clickedSide);
                 highlightItem(i);
             }
             else if (e.Button == MouseButtons.Right)
             {
-                mouseX = (e.X - borderLeft) - showOffsetX;
-                mouseY = (e.Y - borderTop) - showOffsetY;
-                if(clickedLayer=="r")
+                mouse.X = (e.X - borderLeft) - imgPosOffset.X;
+                mouse.Y = (e.Y - borderTop) - imgPosOffset.Y;
+                if(clickedSide=="r")
                 {
-                    mouseX -= (imageSpace + (int)(image1.Width * cfg.scale));
-                    float imgWidth = (float)(image1.Width * cfg.scale);
-                    mouseX = (int)(imgWidth - mouseX);
+                    mouse.X -= (imageSpace + (int)(image1.Width * getScaling()));
+                    float imgWidth = (float)(image1.Width * getScaling());
+                    mouse.X = (int)(imgWidth - mouse.X);
                 }
-                int x2 = getUnscaledX(e);
-                mouseB = clickedLayer;
+                mouseB = clickedSide;
                 updt();
             }
             if ((Control.ModifierKeys & Keys.Shift) != 0)
             {
-                showOffsetX -= (mouseDownX - e.X);
-                showOffsetY -= (mouseDownY - e.Y);
+                imgPosOffset.X -= (mouseDown.X - e.X);
+                imgPosOffset.Y -= (mouseDown.Y - e.Y);
                 updt();
             }
-            mouseDownX = e.X;
-            mouseDownY = e.Y;
+            mouseDown.X = e.X;
+            mouseDown.Y = e.Y;
         }
+
 
         private void Form1_MouseDown(object sender, MouseEventArgs e)
         {
             updateMouseEvent(e);
         }
+
 
         private void Form1_MouseMove(object sender, MouseEventArgs e)
         {
@@ -269,11 +307,13 @@ namespace PCB_Explorer
             cfg.Save(cfgFile);
         }
 
+
         private void nuScale_ValueChanged(object sender, EventArgs e)
         {
             cfg.scale = (float)nuScale.Value;
             updt();
         }
+
 
         private void nuOffsetX_ValueChanged(object sender, EventArgs e)
         {
@@ -281,11 +321,13 @@ namespace PCB_Explorer
             updt();
         }
 
+
         private void nuOffsetY_ValueChanged(object sender, EventArgs e)
         {
             cfg.offsetY = (int)nuOffsetY.Value;
             updt();
         }
+
 
         private void nuScaleX_ValueChanged(object sender, EventArgs e)
         {
@@ -293,11 +335,13 @@ namespace PCB_Explorer
             updt();
         }
 
+
         private void nuScaleY_ValueChanged(object sender, EventArgs e)
         {
             cfg.scaleY = (float)nuScaleY.Value;
             updt();
         }
+
 
         private void btnItemAdd_Click(object sender, EventArgs e)
         {
@@ -310,10 +354,12 @@ namespace PCB_Explorer
                 lbItems.SelectedIndex = lbItems.Items.Count - 1;
         }
 
+
         private void lbItems_SelectedIndexChanged(object sender, EventArgs e)
         {
             populateContactList();
         }
+
 
         private Item getSelectedItem()
         {
@@ -326,6 +372,7 @@ namespace PCB_Explorer
             return ret;
         }
 
+
         private void addContact(string b)
         {
             Item i = getSelectedItem();
@@ -337,25 +384,29 @@ namespace PCB_Explorer
                     Type t = typeof(List<>).MakeGenericType(c.GetType());
                     i.contacts = (IList<Contact>)Activator.CreateInstance(t);
                 }
-                i.contacts.Add(new Contact(mouseX / cfg.scale, mouseY / cfg.scale, b));
+                i.contacts.Add(new Contact(mouse.X / getScaling(), mouse.Y / getScaling(), b));
             }
             populateContactList();
         }
+
 
         private void btnAddContactLeft_Click(object sender, EventArgs e)
         {
             addContact("l");
         }
 
+
         private void btnAddContactBoth_Click(object sender, EventArgs e)
         {
             addContact("b");
         }
 
+
         private void btnAddContactRight_Click(object sender, EventArgs e)
         {
             addContact("r");
         }
+
 
         private Contact getSelectedContact()
         {
@@ -369,22 +420,25 @@ namespace PCB_Explorer
             return ret;
         }
 
+
         private void showContact(Contact c)
         {
-            selB = "";
+            highlightedSide = "";
             if (null != c)
             {
-                selX = c.x * cfg.scale;
-                selY = c.y * cfg.scale;
-                selB = c.b;
+                highlightedPos.X = c.x * getScaling();
+                highlightedPos.Y = c.y * getScaling();
+                highlightedSide = c.b;
             }
             updt();
         }
+
 
         private void lbContact_SelectedIndexChanged(object sender, EventArgs e)
         {
             showContact(getSelectedContact());
         }
+
 
         private void btnItemDel_Click(object sender, EventArgs e)
         {
@@ -395,6 +449,7 @@ namespace PCB_Explorer
             }
             populateItemList();
         }
+
 
         private void btnDelContact_Click(object sender, EventArgs e)
         {
@@ -422,6 +477,7 @@ namespace PCB_Explorer
             return ret;
         }
 
+
         private Item findItemAtPos(int x, int y, string layer)
         {
             Item item = null;
@@ -439,9 +495,7 @@ namespace PCB_Explorer
                     }
                 }
             }
-
             return item;
         }
-
     }
 }
